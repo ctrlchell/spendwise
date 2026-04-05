@@ -1,0 +1,11 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\SpendWiseApi",
+    "\\SpendWiseApi\\Controllers",
+    "\\SpendWiseApi\\Data",
+    "\\SpendWiseApi\\Services"
+  ],
+  "SelectedNode": "\\SpendWiseApi\\Services\\ExpenseAnalysisService.cs",
+  "PreviewInSolutionExplorer": false
+}

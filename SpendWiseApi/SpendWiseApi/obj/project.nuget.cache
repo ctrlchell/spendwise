@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "xSuQ5nQp9mVfuT9nzcZ7S6a2WJZ+FrIdGuBIpUP5oCaxjuonq7SosaKUdeYEQZ/ZwYInn6nPXvTvB8XJL/XO8w==",
+  "dgSpecHash": "JowUuqRQYRqK2qMhuMsRJ/KjMB9QIzSNQT5/LB8XMq+wGlXwywQ40EeNNHGMEEc58aggLDjA06t8r5/oWeCb3Q==",
   "success": true,
-  "projectFilePath": "C:\\Users\\michy\\OneDrive\\Desktop\\spendwise\\SpendWiseApi\\SpendWiseApi\\SpendWiseApi.csproj",
+  "projectFilePath": "C:\\Users\\michy\\OneDrive\\Documents\\GitHub\\spendwise\\SpendWiseApi\\SpendWiseApi\\SpendWiseApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\michy\\.nuget\\packages\\azure.core\\1.25.0\\azure.core.1.25.0.nupkg.sha512",
     "C:\\Users\\michy\\.nuget\\packages\\azure.identity\\1.7.0\\azure.identity.1.7.0.nupkg.sha512",

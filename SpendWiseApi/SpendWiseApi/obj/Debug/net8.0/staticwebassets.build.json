@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "LRuXERxtJ0oOf3IilU1XqgrD92xQiRqfCg2aAqz1Lq0=",
+  "Source": "SpendWiseApi",
+  "BasePath": "_content/SpendWiseApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

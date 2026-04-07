@@ -15,6 +15,22 @@ type NewExpense = {
   date: string;
 };
 
+type AnalysisItem = {
+  note: string;
+  amount: number;
+  category: string;
+  date?: string;
+};
+
+type Analysis = {
+  highestPriority?: string;
+  essential?: AnalysisItem[];
+  optional?: AnalysisItem[];
+  luxury?: AnalysisItem[];
+  overspendingPatterns?: string[];
+  advice?: string;
+};
+
 const initialForm: NewExpense = {
   amount: '',
   category: '',
@@ -24,7 +40,8 @@ const initialForm: NewExpense = {
 
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [analysis, setAnalysis] = useState('');
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [rawAnalysis, setRawAnalysis] = useState<string>('');
   const [form, setForm] = useState<NewExpense>(initialForm);
   const [loadingExpenses, setLoadingExpenses] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -83,6 +100,8 @@ function App() {
       }
 
       setForm(initialForm);
+      setAnalysis(null);
+      setRawAnalysis('');
       await fetchExpenses();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unexpected error saving expense');
@@ -92,23 +111,48 @@ function App() {
   }
 
   async function runAnalysis() {
-    setAnalyzing(true);
-    setError('');
+  setAnalyzing(true);
+  setError('');
+  setAnalysis(null);
+  setRawAnalysis('');
 
-    try {
-      const response = await fetch('/api/expenses/analyze');
-      if (!response.ok) {
-        throw new Error('Unable to analyze expenses');
-      }
-
-      const data = (await response.json()) as { analysis: string };
-      setAnalysis(data.analysis);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unexpected error analyzing expenses');
-    } finally {
-      setAnalyzing(false);
+  try {
+    const response = await fetch('/api/expenses/analyze');
+    if (!response.ok) {
+      throw new Error('Unable to analyze expenses');
     }
+
+    const data = await response.json();
+    setAnalysis(data);
+
+    if (data.rawText) {
+      setRawAnalysis(data.rawText);
+    }
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Unexpected error analyzing expenses');
+  } finally {
+    setAnalyzing(false);
   }
+}
+
+  const renderItems = (title: string, items?: AnalysisItem[]) => (
+    <div>
+      <h3 className="mb-2 text-lg font-semibold capitalize">{title}</h3>
+      {!items || items.length === 0 ? (
+        <p className="text-sm text-slate-500">No items in this group.</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item, index) => (
+            <div key={`${title}-${index}`} className="rounded-lg border border-slate-200 p-3">
+              <p><strong>note:</strong> {item.note || '—'}</p>
+              <p><strong>amount:</strong> ₦{item.amount}</p>
+              <p><strong>category:</strong> {item.category}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-10 text-slate-900">
@@ -120,6 +164,7 @@ function App() {
       <div className="grid gap-6 md:grid-cols-3">
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-1">
           <h2 className="mb-4 text-xl font-semibold">Add Expense</h2>
+
           <form className="space-y-3" onSubmit={handleSubmit}>
             <label className="block">
               <span className="mb-1 block text-sm font-medium">Amount</span>
@@ -130,7 +175,9 @@ function App() {
                 required
                 type="number"
                 value={form.amount}
-                onChange={(event) => setForm((previous) => ({ ...previous, amount: event.target.value }))}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, amount: event.target.value }))
+                }
               />
             </label>
 
@@ -140,7 +187,9 @@ function App() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-sky-500 focus:ring"
                 required
                 value={form.category}
-                onChange={(event) => setForm((previous) => ({ ...previous, category: event.target.value }))}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, category: event.target.value }))
+                }
               />
             </label>
 
@@ -151,7 +200,9 @@ function App() {
                 required
                 type="date"
                 value={form.date}
-                onChange={(event) => setForm((previous) => ({ ...previous, date: event.target.value }))}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, date: event.target.value }))
+                }
               />
             </label>
 
@@ -161,7 +212,9 @@ function App() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none ring-sky-500 focus:ring"
                 rows={3}
                 value={form.note}
-                onChange={(event) => setForm((previous) => ({ ...previous, note: event.target.value }))}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, note: event.target.value }))
+                }
               />
             </label>
 
@@ -179,7 +232,7 @@ function App() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold">Expenses</h2>
             <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium">
-              Total: <span className="font-bold">${total.toFixed(2)}</span>
+              Total: <span className="font-bold">₦{total.toFixed(2)}</span>
             </div>
           </div>
 
@@ -193,9 +246,11 @@ function App() {
                 <li key={expense.id} className="rounded-lg border border-slate-200 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-semibold">{expense.category}</p>
-                    <p className="text-lg font-bold text-sky-700">${expense.amount.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-sky-700">₦{expense.amount.toFixed(2)}</p>
                   </div>
-                  <p className="text-sm text-slate-500">{new Date(expense.date).toLocaleDateString()}</p>
+                  <p className="text-sm text-slate-500">
+                    {new Date(expense.date).toLocaleDateString()}
+                  </p>
                   {expense.note && <p className="mt-1 text-sm text-slate-700">{expense.note}</p>}
                 </li>
               ))}
@@ -217,10 +272,53 @@ function App() {
           </button>
         </div>
 
-        {analysis ? <p className="whitespace-pre-wrap text-slate-700">{analysis}</p> : <p className="text-slate-500">Run analysis to get personalized insights.</p>}
+        {!analysis && !rawAnalysis && !analyzing && (
+          <p className="text-slate-500">Run analysis to see your spending insights.</p>
+        )}
+
+        {rawAnalysis && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-slate-700 whitespace-pre-wrap">
+            {rawAnalysis}
+          </div>
+        )}
+
+        {analysis && (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold">Highest Priority</h3>
+              <p className="text-slate-700">{analysis.highestPriority || '—'}</p>
+            </div>
+
+            {renderItems('essential', analysis.essential)}
+            {renderItems('optional', analysis.optional)}
+            {renderItems('luxury', analysis.luxury)}
+
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">Advice</h3>
+              <p className="text-slate-700">{analysis.advice || 'No advice available.'}</p>
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">Overspending Patterns</h3>
+              {!analysis.overspendingPatterns || analysis.overspendingPatterns.length === 0 ? (
+                <p className="text-sm text-slate-500">No overspending patterns detected.</p>
+              ) : (
+                <ul className="list-disc space-y-1 pl-5 text-slate-700">
+                  {analysis.overspendingPatterns.map((pattern, index) => (
+                    <li key={index}>{pattern}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
-      {error && <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+      {error && (
+        <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+          {error}
+        </p>
+      )}
     </main>
   );
 }

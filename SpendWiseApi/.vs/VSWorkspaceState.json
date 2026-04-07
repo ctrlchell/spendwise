@@ -6,6 +6,6 @@
     "\\SpendWiseApi\\Data",
     "\\SpendWiseApi\\Services"
   ],
-  "SelectedNode": "\\SpendWiseApi\\Services\\ExpenseAnalysisService.cs",
+  "SelectedNode": "\\SpendWiseApi\\Program.cs",
   "PreviewInSolutionExplorer": false
 }

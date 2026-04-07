@@ -11,10 +11,15 @@ public class ExpenseAnalysisService
         _http = http;
     }
 
-    public async Task<string> AnalyzeExpenses(List<Expense> expenses)
+    public async Task<ExpenseAnalysisResult> AnalyzeExpensesAsync(List<Expense> expenses)
     {
         if (expenses == null || !expenses.Any())
-            return "No expenses yet!";
+        {
+            return new ExpenseAnalysisResult
+            {
+                Advice = "No expenses yet."
+            };
+        }
 
         var payload = new
         {
@@ -28,9 +33,11 @@ public class ExpenseAnalysisService
         };
 
         var prompt = $@"
-You are a smart spending assistant.
+You are a strict personal finance assistant for a spending analysis app.
 
-Analyze the expenses and return ONLY JSON in this format:
+Your job is to analyze expenses and classify them realistically.
+
+Return ONLY valid JSON in this exact format:
 
 {{
   ""essential"": [],
@@ -38,50 +45,101 @@ Analyze the expenses and return ONLY JSON in this format:
   ""luxury"": [],
   ""highestPriority"": """",
   ""overspendingPatterns"": [],
-  ""advice"": []
+  ""advice"": """"
 }}
 
-Rules:
-- Essential = necessary for survival, health, work, bills, transport, rent, groceries
-- Optional = non-essential but reasonable spending, like eating out occasionally or small personal items
-- Luxury = non-essential, high-cost, aesthetic, impulse, or lifestyle spending that can be postponed
+Classification rules:
+- Essential = expenses necessary for survival, health, work, transport to work, bills, groceries, rent, utilities
+- Optional = reasonable but non-essential spending, such as casual eating out, entertainment, subscriptions, or small comfort purchases
+- Luxury = expensive, aesthetic, impulsive, avoidable, or postponable spending
 
-Important:
-- Transport to work should usually be essential
-- Groceries should usually be essential
-- Aesthetic or decorative purchases are usually luxury or optional depending on amount
-- Use the note, category, and amount together before deciding
-
-Tasks:
-1. classify each expense as essential, optional, or luxury
-2. identify the highest-priority spending
-3. point out any overspending patterns
-4. give short practical advice
+Important behavior rules:
+- Transport to work is essential
+- Groceries are essential
+- Eating out, shawarma, snacks, and takeout are optional unless clearly necessary
+- Aesthetic purchases, decor, beauty extras, and trend-based shopping are usually luxury
+- Do not classify based only on category; use note, amount, and category together
+- Large non-essential purchases should be treated more seriously
+- Be realistic, concise, and financially responsible
+- Do not praise the user
+- Do not give generic motivational advice
+- Advice should be direct, specific, and practical
 
 Expense data:
 {JsonSerializer.Serialize(payload)}
+";
 
-Keep the response clear, concise, and helpful.
-";      
+        try
+        {
+            var response = await _http.PostAsJsonAsync(
+                "http://localhost:11434/api/generate",
+                new
+                {
+                    model = "qwen2.5:3b",
+                    prompt,
+                    stream = false
+                });
 
-        var response = await _http.PostAsJsonAsync(
-            "http://localhost:11434/api/generate",
-            new
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+
+            if (!result.TryGetProperty("response", out var responseProperty))
             {
-                model = "gemma:2b",
-                prompt = prompt,
-                stream = false
-            });
+                return new ExpenseAnalysisResult
+                {
+                    Advice = "AI response was missing the expected field."
+                };
+            }
 
-        response.EnsureSuccessStatusCode();
+            var aiText = responseProperty.GetString();
 
-        var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+            if (string.IsNullOrWhiteSpace(aiText))
+            {
+                return new ExpenseAnalysisResult
+                {
+                    Advice = "AI returned an empty response."
+                };
+            }
 
-        return result.GetProperty("response").GetString() ?? "Could not analyze expenses.";
-    }
+            aiText = aiText.Trim();
 
-    public async Task<string> AnalyzeExpensesAsync(List<Expense> expenses)
-    {
-        return await AnalyzeExpenses(expenses);
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<ExpenseAnalysisResult>(
+                    aiText,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                if (parsed != null)
+                {
+                    return parsed;
+                }
+
+                return new ExpenseAnalysisResult
+                {
+                    Advice = "Could not parse AI analysis.",
+                    RawText = aiText
+                };
+            }
+            catch
+            {
+                return new ExpenseAnalysisResult
+                {
+                    Advice = "AI returned text instead of valid JSON.",
+                    RawText = aiText
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            return new ExpenseAnalysisResult
+            {
+                Advice = "Analysis failed on the server.",
+                RawText = ex.Message
+            };
+        }
     }
 }

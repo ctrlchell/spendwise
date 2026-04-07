@@ -38,6 +38,6 @@ public class ExpensesController : ControllerBase
     {
         var expenses = await _context.Expenses.ToListAsync();
         var analysis = await _analysisService.AnalyzeExpensesAsync(expenses);
-        return Ok(new { analysis });
+        return Ok(analysis);
     }
 }

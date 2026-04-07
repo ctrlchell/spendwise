@@ -20,7 +20,10 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 builder.Services.AddSingleton<ExpenseAnalysisService>();
-builder.Services.AddHttpClient<ExpenseAnalysisService>();
+builder.Services.AddHttpClient<ExpenseAnalysisService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 builder.Services.AddScoped<ExpenseAnalysisService>();
 
 var app = builder.Build();
